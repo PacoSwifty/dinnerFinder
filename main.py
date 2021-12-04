@@ -2,11 +2,17 @@ from __future__ import print_function
 import tkinter
 from tkinter import *
 import os.path
+from datetime import datetime
+
+# My Custom Classes
+from mapping import *
+from classes import Recipe
+
+# Sheets API
 from googleapiclient.discovery import build
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
-import json
 
 # region variables
 width = 600
@@ -16,7 +22,7 @@ primaryColor = "#a2e3c4"
 secondaryColor = "#3c493f"
 neutralLightColor = "#b3bfb8"
 neutralDarkColor = "#7e8d85"
-recipes = {}
+recipeList = []
 
 
 # endregion
@@ -76,25 +82,20 @@ class MyWindow:
 
 # endregion
 
-# If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+# region helper methods
+def parseDatime(dateString):
+    try:
+        parsedDate = datetime.strptime(dateString, "%Y-%m-%d")
+    except ValueError:
+        parsedDate = ''
+    return parsedDate
 
-# The ID and range of a sample spreadsheet.
-RECIPE_SPREADSHEET_ID = '1PsAx6wrv1d1-Ya2SQsOeBvwGAOouIPj0HcpWzh_xNDE'
-SAMPLE_RANGE_NAME = 'A2:G'
-FIELD_ID = 0
-FIELD_NAME = 1
-FIELD_LINK = 2
-FIELD_NOTES = 3
-FIELD_DATE_COOKED = 4
-FIELD_CORE_INGREDIENT = 5
-FIELD_CUISINE = 6
+
+# endregion
+
 
 
 def main():
-    """Shows basic usage of the Sheets API.
-    Prints values from a sample spreadsheet.
-    """
     creds = None
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first
@@ -118,7 +119,7 @@ def main():
     # Call the Sheets API
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=RECIPE_SPREADSHEET_ID,
-                                range=SAMPLE_RANGE_NAME).execute()
+                                range=RECIPE_COLUMN_RANGE).execute()
     values = result.get('values', [])
 
     if not values:
@@ -126,19 +127,19 @@ def main():
     else:
         print('Found Data:')
         for row in values:
-            recipeId = row[FIELD_ID]
-            recipe = {
-                "id": recipeId,
-                "name": row[FIELD_NAME],
-                "link": row[FIELD_LINK],
-                "notes": row[FIELD_NOTES],
-                "dateCooked": row[FIELD_DATE_COOKED],
-                "coreIngredient": row[FIELD_CORE_INGREDIENT],
-                "cuisine": row[FIELD_CUISINE]
-            }
-            recipes[recipeId] = recipe
-            # Print columns A and E, which correspond to indices 0 and 4.
-        print(recipes)
+            dateStr = row[FIELD_DATE_COOKED]
+            parsedDate = parseDatime(dateStr)
+
+            recipe = Recipe(row[FIELD_ID],
+                            row[FIELD_NAME],
+                            row[FIELD_LINK],
+                            row[FIELD_NOTES],
+                            parsedDate,
+                            row[FIELD_CORE_INGREDIENT],
+                            row[FIELD_CUISINE])
+            recipeList.append(recipe)
+
+        print(recipeList[0])
 
 
 if __name__ == '__main__':
