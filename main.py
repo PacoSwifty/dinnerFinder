@@ -3,6 +3,8 @@ import tkinter
 from tkinter import *
 import os.path
 from datetime import datetime
+import random
+import webbrowser
 
 # My Custom Classes
 from mapping import *
@@ -15,14 +17,8 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 # region variables
-width = 600
-height = 400
-bgColor = "#F0F7F4"
-primaryColor = "#a2e3c4"
-secondaryColor = "#3c493f"
-neutralLightColor = "#b3bfb8"
-neutralDarkColor = "#7e8d85"
 recipeList = []
+currentRecipe = Recipe("", "", "", "", None, "", "")
 
 
 # endregion
@@ -30,8 +26,15 @@ recipeList = []
 # region UI handlers
 # When passing a method as a command in the constructor of a widget, it does not
 def onGenerateClicked():
-    print("clicked via command instead of bind")
-    mywin.setRecipeName("silly")
+    global currentRecipe
+    currentRecipe = pickRandomRecipe()
+    mywin.setRecipeName(currentRecipe.name)
+    mywin.setNotes(currentRecipe.notes)
+    mywin.setUrl(currentRecipe.url)
+
+
+def onUrlClicked():
+    webbrowser.open_new(currentRecipe.url)
 
 
 # endregion
@@ -45,25 +48,32 @@ class MyWindow:
         self.title = Label(win,
                            text="What Should We Eat?",
                            font=("Arial", 24),
-                           bg=bgColor, fg=secondaryColor)
+                           bg=BG_COLOR, fg=SECONDARY_COLOR)
 
         self.recipeName = Label(win,
-                                text="Turkish Delight",
+                                text="Click Below to Begin",
                                 font=("Arial", 14),
-                                bg=bgColor, fg=secondaryColor)
+                                bg=BG_COLOR, fg=SECONDARY_COLOR)
 
         self.notes = Label(win,
-                           text="Notes: don't overprove it you bellend",
+                           text="",
                            font=("Arial", 12),
-                           bg=bgColor, fg=secondaryColor)
+                           wraplength=TEXT_WRAP_WIDTH,
+                           justify="center",
+                           bg=BG_COLOR, fg=SECONDARY_COLOR)
+
+        self.url = Label(win,
+                         text="",
+                         font=("Ariel", 12),
+                         bg=BG_COLOR, fg=NEUTRAL_DARK_COLOR)
 
         self.generateButton = Button(win,
                                      text="Random Meal",
                                      padx=20, pady=5,
                                      font=("Arial", 14),
                                      bd=4,
-                                     fg=primaryColor, bg=secondaryColor,
-                                     activebackground=neutralDarkColor, activeforeground=primaryColor,
+                                     fg=PRIMARY_COLOR, bg=SECONDARY_COLOR,
+                                     activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR,
                                      command=onGenerateClicked)
 
         # Place the views
@@ -71,6 +81,8 @@ class MyWindow:
         self.title.pack(side=TOP, pady=15)
         self.recipeName.pack(side=TOP)
         self.notes.pack(side=TOP)
+        self.url.pack(side=TOP)
+        self.url.bind("<Button-1>", lambda e: onUrlClicked())
         self.generateButton.pack(side=BOTTOM, pady=50)
 
     def setRecipeName(self, text):
@@ -79,10 +91,13 @@ class MyWindow:
     def setNotes(self, text):
         self.notes.config(text=text)
 
+    def setUrl(self, text):
+        self.url.config(text=text)
+
 
 # endregion
 
-# region helper methods
+# region Logic Methods
 def parseDatime(dateString):
     try:
         parsedDate = datetime.strptime(dateString, "%Y-%m-%d")
@@ -91,8 +106,16 @@ def parseDatime(dateString):
     return parsedDate
 
 
-# endregion
+def convertDateToString(dateTime):
+    # TODO: Write this method
+    returnStr = ""
 
+
+def pickRandomRecipe():
+    return random.choice(recipeList)
+
+
+# endregion
 
 
 def main():
@@ -132,22 +155,20 @@ def main():
 
             recipe = Recipe(row[FIELD_ID],
                             row[FIELD_NAME],
-                            row[FIELD_LINK],
+                            row[FIELD_URL],
                             row[FIELD_NOTES],
                             parsedDate,
                             row[FIELD_CORE_INGREDIENT],
                             row[FIELD_CUISINE])
             recipeList.append(recipe)
 
-        print(recipeList[0])
-
 
 if __name__ == '__main__':
     main()
 
-# window = Tk()
-# mywin = MyWindow(window)
-# window.title('Whats for dinner?')
-# window.geometry(f"{width}x{height}+10+10")
-# window.configure(bg=bgColor)
-# window.mainloop()
+window = Tk()
+mywin = MyWindow(window)
+window.title('Whats for dinner?')
+window.geometry(f"{WIDTH}x{HEIGHT}+10+10")
+window.configure(bg=BG_COLOR)
+window.mainloop()
