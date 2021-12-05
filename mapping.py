@@ -9,15 +9,15 @@ FIELD_CUISINE = 6
 
 # Google Sheets Setup
 # If modifying these scopes, delete the file token.json.
-SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
+SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 # The ID and range of a sample spreadsheet.
 RECIPE_SPREADSHEET_ID = '1PsAx6wrv1d1-Ya2SQsOeBvwGAOouIPj0HcpWzh_xNDE'
 RECIPE_COLUMN_RANGE = 'A2:G'
 
 # UI Constants
-WIDTH = 600
-HEIGHT = 400
-TEXT_WRAP_WIDTH = 400
+WIDTH = 800
+HEIGHT = 600
+TEXT_WRAP_WIDTH = 650
 BG_COLOR = "#F0F7F4"
 PRIMARY_COLOR = "#a2e3c4"
 SECONDARY_COLOR = "#3c493f"

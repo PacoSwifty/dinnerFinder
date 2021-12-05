@@ -19,6 +19,7 @@ from google.oauth2.credentials import Credentials
 # region variables
 recipeList = []
 currentRecipe = Recipe("", "", "", "", None, "", "")
+service = None
 
 
 # endregion
@@ -31,6 +32,11 @@ def onGenerateClicked():
     mywin.setRecipeName(currentRecipe.name)
     mywin.setNotes(currentRecipe.notes)
     mywin.setUrl(currentRecipe.url)
+
+
+def onConfirmCookedClicked():
+    print("We cooked this")
+    markRecipeAsCooked()
 
 
 def onUrlClicked():
@@ -76,6 +82,15 @@ class MyWindow:
                                      activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR,
                                      command=onGenerateClicked)
 
+        self.confirmCookedButton = Checkbutton(win,
+                                               text="We Cooked It!",
+                                               padx=4, pady=2,
+                                               font=("Arial", 10),
+                                               bd=10,
+                                               fg=SECONDARY_COLOR, bg=BG_COLOR,
+                                               activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
+                                               command=onConfirmCookedClicked)
+
         # Place the views
         self.title.place(x=100, y=50)
         self.title.pack(side=TOP, pady=15)
@@ -83,7 +98,9 @@ class MyWindow:
         self.notes.pack(side=TOP)
         self.url.pack(side=TOP)
         self.url.bind("<Button-1>", lambda e: onUrlClicked())
-        self.generateButton.pack(side=BOTTOM, pady=50)
+
+        self.confirmCookedButton.pack(side=BOTTOM, pady=10)
+        self.generateButton.pack(side=BOTTOM, pady=2)
 
     def setRecipeName(self, text):
         self.recipeName.config(text=text)
@@ -106,39 +123,17 @@ def parseDatime(dateString):
     return parsedDate
 
 
-def convertDateToString(dateTime):
-    # TODO: Write this method
-    returnStr = ""
+def convertDateToString(timeStamp):
+    stringifiedDate = timeStamp.strftime("%Y-%m-%d")
+    print(f"Converted datetime to this string: {stringifiedDate}")
+    return stringifiedDate
 
 
 def pickRandomRecipe():
     return random.choice(recipeList)
 
 
-# endregion
-
-
-def main():
-    creds = None
-    # The file token.json stores the user's access and refresh tokens, and is
-    # created automatically when the authorization flow completes for the first
-    # time.
-    if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
-    # If there are no (valid) credentials available, let the user log in.
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                'credentials.json', SCOPES)
-            creds = flow.run_local_server(port=0)
-        # Save the credentials for the next run
-        with open('token.json', 'w') as token:
-            token.write(creds.to_json())
-
-    service = build('sheets', 'v4', credentials=creds)
-
+def getRecipesFromSheet():
     # Call the Sheets API
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=RECIPE_SPREADSHEET_ID,
@@ -161,6 +156,52 @@ def main():
                             row[FIELD_CORE_INGREDIENT],
                             row[FIELD_CUISINE])
             recipeList.append(recipe)
+
+
+def markRecipeAsCooked():
+    # This will update the entire row based on the state of the current recipe
+    values = [
+        [
+            currentRecipe.id, currentRecipe.name, currentRecipe.url, currentRecipe.notes,
+            convertDateToString(datetime.now()), currentRecipe.coreIngredient, currentRecipe.cuisine
+        ]
+    ]
+    body = {
+        'values': values
+    }
+    service.spreadsheets().values().update(
+        spreadsheetId=RECIPE_SPREADSHEET_ID,
+        range=f"A{currentRecipe.id}:G{currentRecipe.id}",
+        valueInputOption="RAW",
+        body=body
+    ).execute()
+
+
+# endregion
+
+
+def main():
+    global service
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    service = build('sheets', 'v4', credentials=creds)
+    getRecipesFromSheet()
 
 
 if __name__ == '__main__':
