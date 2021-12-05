@@ -1,2 +1,2 @@
 # dinnerFinder
-Let's go somewhere fun to eat.
+Let's cook something fun for dinner.
