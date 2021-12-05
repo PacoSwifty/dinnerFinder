@@ -18,6 +18,8 @@ from google.oauth2.credentials import Credentials
 
 # region variables
 recipeList = []
+uniqueCuisines = []
+uniqueIngredients = []
 currentRecipe = Recipe("", "", "", "", None, "", "")
 service = None
 
@@ -25,7 +27,6 @@ service = None
 # endregion
 
 # region UI handlers
-# When passing a method as a command in the constructor of a widget, it does not
 def onGenerateClicked():
     global currentRecipe
     currentRecipe = pickRandomRecipe()
@@ -43,14 +44,20 @@ def onUrlClicked():
     webbrowser.open_new(currentRecipe.url)
 
 
+def onCuisineSelected(selectedCuisine):
+    print(f"Cuisine Selected: {selectedCuisine}")
+
+
+def onIngredientSelected(selectedIngredient):
+    print(f"Ingredient Selected: {selectedIngredient}")
+
+
 # endregion
 
 # region UI Initializer
 class MyWindow:
     def __init__(self, win):
         # Create the views
-        self.name_var = tkinter.StringVar()
-
         self.title = Label(win,
                            text="What Should We Eat?",
                            font=("Arial", 24),
@@ -91,6 +98,18 @@ class MyWindow:
                                                activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
                                                command=onConfirmCookedClicked)
 
+        # Setting up OptionMenu dropdowns
+        self.selectedCuisineVariable = StringVar(win)
+        self.selectedCuisineVariable.set(uniqueCuisines[0])
+        self.selectedIngredientVariable = StringVar(win)
+        self.selectedIngredientVariable.set(uniqueIngredients[0])
+
+        self.cuisineOptions = OptionMenu(win, self.selectedCuisineVariable, *uniqueCuisines, command=onCuisineSelected)
+        self.cuisineOptions.pack()
+        self.ingredientOptions = OptionMenu(win, self.selectedIngredientVariable, *uniqueIngredients,
+                                            command=onIngredientSelected)
+        self.ingredientOptions.pack()
+
         # Place the views
         self.title.place(x=100, y=50)
         self.title.pack(side=TOP, pady=15)
@@ -110,6 +129,20 @@ class MyWindow:
 
     def setUrl(self, text):
         self.url.config(text=text)
+
+    def setCuisineOptions(self, options):
+        self.cuisineOptions['menu'].delete(0, 'end')
+        for option in options:
+            self.selectedCuisineVariable.set(options[0])
+            self.cuisineOptions['menu'].add_command(label=option,
+                                                    command=tkinter._setit(self.selectedCuisineVariable, option))
+
+    def setIngredientOptions(self, options):
+        self.ingredientOptions['menu'].delete(0, 'end')
+        for option in options:
+            self.selectedIngredientVariable.set(options[0])
+            self.ingredientOptions['menu'].add_command(label=option,
+                                                       command=tkinter._setit(self.selectedIngredientVariable, option))
 
 
 # endregion
@@ -144,6 +177,8 @@ def getRecipesFromSheet():
         print('No data found.')
     else:
         print('Found Data:')
+        global uniqueCuisines
+        global uniqueIngredients
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
             parsedDate = parseDatime(dateStr)
@@ -156,6 +191,14 @@ def getRecipesFromSheet():
                             row[FIELD_CORE_INGREDIENT],
                             row[FIELD_CUISINE])
             recipeList.append(recipe)
+
+            if recipe.cuisine not in uniqueCuisines:
+                print(f"found new cuisine {recipe.cuisine}")
+                uniqueCuisines.append(recipe.cuisine)
+
+            if recipe.coreIngredient not in uniqueIngredients:
+                print(f"found new ingredient {recipe.coreIngredient}")
+                uniqueIngredients.append(recipe.coreIngredient)
 
 
 def markRecipeAsCooked():
