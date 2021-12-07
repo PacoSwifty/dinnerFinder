@@ -18,6 +18,8 @@ from google.oauth2.credentials import Credentials
 
 # region variables
 recipeList = []
+uniqueCuisines = []
+uniqueIngredients = []
 currentRecipe = Recipe("", "", "", "", None, "", "")
 service = None
 
@@ -25,7 +27,6 @@ service = None
 # endregion
 
 # region UI handlers
-# When passing a method as a command in the constructor of a widget, it does not
 def onGenerateClicked():
     global currentRecipe
     currentRecipe = pickRandomRecipe()
@@ -43,14 +44,20 @@ def onUrlClicked():
     webbrowser.open_new(currentRecipe.url)
 
 
+def onCuisineSelected(selectedCuisine):
+    print(f"Cuisine Selected: {selectedCuisine}")
+
+
+def onIngredientSelected(selectedIngredient):
+    print(f"Ingredient Selected: {selectedIngredient}")
+
+
 # endregion
 
 # region UI Initializer
 class MyWindow:
     def __init__(self, win):
         # Create the views
-        self.name_var = tkinter.StringVar()
-
         self.title = Label(win,
                            text="What Should We Eat?",
                            font=("Arial", 24),
@@ -91,6 +98,12 @@ class MyWindow:
                                                activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
                                                command=onConfirmCookedClicked)
 
+        # Setting up OptionMenu dropdowns
+        self.selectedCuisineVariable = StringVar(win)
+        self.selectedCuisineVariable.set(uniqueCuisines[0])
+        self.selectedIngredientVariable = StringVar(win)
+        self.selectedIngredientVariable.set(uniqueIngredients[0])
+
         # Place the views
         self.title.place(x=100, y=50)
         self.title.pack(side=TOP, pady=15)
@@ -99,7 +112,18 @@ class MyWindow:
         self.url.pack(side=TOP)
         self.url.bind("<Button-1>", lambda e: onUrlClicked())
 
+        # Cuisine and ingredient pickers
+        dropDownHolder = Frame(win, bg=BG_COLOR)
+        self.cuisineOptions = OptionMenu(dropDownHolder, self.selectedCuisineVariable, *uniqueCuisines, command=onCuisineSelected)
+        self.ingredientOptions = OptionMenu(dropDownHolder, self.selectedIngredientVariable, *uniqueIngredients,
+                                            command=onIngredientSelected)
+        self.cuisineOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
+        self.ingredientOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
+        self.cuisineOptions.pack(in_=dropDownHolder, side=LEFT, padx=20, pady=10)
+        self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
+
         self.confirmCookedButton.pack(side=BOTTOM, pady=10)
+        dropDownHolder.pack(side=BOTTOM, fill=NONE, expand=FALSE)
         self.generateButton.pack(side=BOTTOM, pady=2)
 
     def setRecipeName(self, text):
@@ -110,7 +134,6 @@ class MyWindow:
 
     def setUrl(self, text):
         self.url.config(text=text)
-
 
 # endregion
 
@@ -144,6 +167,9 @@ def getRecipesFromSheet():
         print('No data found.')
     else:
         print('Found Data:')
+        global uniqueCuisines
+        global uniqueIngredients
+        # TODO consider wiping unique lists here depending on how we reuse this method with queries
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
             parsedDate = parseDatime(dateStr)
@@ -156,6 +182,12 @@ def getRecipesFromSheet():
                             row[FIELD_CORE_INGREDIENT],
                             row[FIELD_CUISINE])
             recipeList.append(recipe)
+
+            if recipe.cuisine not in uniqueCuisines:
+                uniqueCuisines.append(recipe.cuisine)
+
+            if recipe.coreIngredient not in uniqueIngredients:
+                uniqueIngredients.append(recipe.coreIngredient)
 
 
 def markRecipeAsCooked():
