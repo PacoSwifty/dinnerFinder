@@ -104,12 +104,6 @@ class MyWindow:
         self.selectedIngredientVariable = StringVar(win)
         self.selectedIngredientVariable.set(uniqueIngredients[0])
 
-        self.cuisineOptions = OptionMenu(win, self.selectedCuisineVariable, *uniqueCuisines, command=onCuisineSelected)
-        self.cuisineOptions.pack()
-        self.ingredientOptions = OptionMenu(win, self.selectedIngredientVariable, *uniqueIngredients,
-                                            command=onIngredientSelected)
-        self.ingredientOptions.pack()
-
         # Place the views
         self.title.place(x=100, y=50)
         self.title.pack(side=TOP, pady=15)
@@ -118,7 +112,18 @@ class MyWindow:
         self.url.pack(side=TOP)
         self.url.bind("<Button-1>", lambda e: onUrlClicked())
 
+        # Cuisine and ingredient pickers
+        dropDownHolder = Frame(win, bg=BG_COLOR)
+        self.cuisineOptions = OptionMenu(dropDownHolder, self.selectedCuisineVariable, *uniqueCuisines, command=onCuisineSelected)
+        self.ingredientOptions = OptionMenu(dropDownHolder, self.selectedIngredientVariable, *uniqueIngredients,
+                                            command=onIngredientSelected)
+        self.cuisineOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
+        self.ingredientOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
+        self.cuisineOptions.pack(in_=dropDownHolder, side=LEFT, padx=20, pady=10)
+        self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
+
         self.confirmCookedButton.pack(side=BOTTOM, pady=10)
+        dropDownHolder.pack(side=BOTTOM, fill=NONE, expand=FALSE)
         self.generateButton.pack(side=BOTTOM, pady=2)
 
     def setRecipeName(self, text):
@@ -129,21 +134,6 @@ class MyWindow:
 
     def setUrl(self, text):
         self.url.config(text=text)
-
-    def setCuisineOptions(self, options):
-        self.cuisineOptions['menu'].delete(0, 'end')
-        for option in options:
-            self.selectedCuisineVariable.set(options[0])
-            self.cuisineOptions['menu'].add_command(label=option,
-                                                    command=tkinter._setit(self.selectedCuisineVariable, option))
-
-    def setIngredientOptions(self, options):
-        self.ingredientOptions['menu'].delete(0, 'end')
-        for option in options:
-            self.selectedIngredientVariable.set(options[0])
-            self.ingredientOptions['menu'].add_command(label=option,
-                                                       command=tkinter._setit(self.selectedIngredientVariable, option))
-
 
 # endregion
 
@@ -179,6 +169,7 @@ def getRecipesFromSheet():
         print('Found Data:')
         global uniqueCuisines
         global uniqueIngredients
+        # TODO consider wiping unique lists here depending on how we reuse this method with queries
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
             parsedDate = parseDatime(dateStr)
@@ -193,11 +184,9 @@ def getRecipesFromSheet():
             recipeList.append(recipe)
 
             if recipe.cuisine not in uniqueCuisines:
-                print(f"found new cuisine {recipe.cuisine}")
                 uniqueCuisines.append(recipe.cuisine)
 
             if recipe.coreIngredient not in uniqueIngredients:
-                print(f"found new ingredient {recipe.coreIngredient}")
                 uniqueIngredients.append(recipe.coreIngredient)
 
 
