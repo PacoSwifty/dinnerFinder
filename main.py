@@ -17,9 +17,12 @@ from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
 # region variables
-recipeList = []
+fullRecipeList = []
+filteredRecipeList = []
 uniqueCuisines = []
 uniqueIngredients = []
+currentlySelectedCuisine = "Any"
+currentlySelectedIngredient = "Any"
 currentRecipe = Recipe("", "", "", "", None, "", "")
 service = None
 
@@ -45,11 +48,35 @@ def onUrlClicked():
 
 
 def onCuisineSelected(selectedCuisine):
+    global currentlySelectedCuisine
+    currentlySelectedCuisine = selectedCuisine
+    filteredRecipeList.clear()
+    for recipe in fullRecipeList:
+        if currentlySelectedIngredient == "Any":
+            if selectedCuisine == "Any" or recipe.cuisine == selectedCuisine:
+                filteredRecipeList.append(recipe)
+        else:
+            if (
+                    selectedCuisine == "Any" or recipe.cuisine == selectedCuisine) and recipe.coreIngredient == currentlySelectedIngredient:
+                filteredRecipeList.append(recipe)
     print(f"Cuisine Selected: {selectedCuisine}")
+    print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
 
 
 def onIngredientSelected(selectedIngredient):
+    global currentlySelectedIngredient
+    currentlySelectedIngredient = selectedIngredient
+    filteredRecipeList.clear()
+    for recipe in fullRecipeList:
+        if currentlySelectedCuisine == "Any":
+            if selectedIngredient == "Any" or recipe.coreIngredient == selectedIngredient:
+                filteredRecipeList.append(recipe)
+        else:
+            if (
+                    selectedIngredient == "Any" or recipe.coreIngredient == selectedIngredient) and recipe.cuisine == currentlySelectedCuisine:
+                filteredRecipeList.append(recipe)
     print(f"Ingredient Selected: {selectedIngredient}")
+    print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
 
 
 # endregion
@@ -114,11 +141,14 @@ class MyWindow:
 
         # Cuisine and ingredient pickers
         dropDownHolder = Frame(win, bg=BG_COLOR)
-        self.cuisineOptions = OptionMenu(dropDownHolder, self.selectedCuisineVariable, *uniqueCuisines, command=onCuisineSelected)
+        self.cuisineOptions = OptionMenu(dropDownHolder, self.selectedCuisineVariable, *uniqueCuisines,
+                                         command=onCuisineSelected)
         self.ingredientOptions = OptionMenu(dropDownHolder, self.selectedIngredientVariable, *uniqueIngredients,
                                             command=onIngredientSelected)
-        self.cuisineOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
-        self.ingredientOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
+        self.cuisineOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR, activebackground=NEUTRAL_DARK_COLOR,
+                                   activeforeground=PRIMARY_COLOR)
+        self.ingredientOptions.config(width=20, fg=PRIMARY_COLOR, bg=SECONDARY_COLOR,
+                                      activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR)
         self.cuisineOptions.pack(in_=dropDownHolder, side=LEFT, padx=20, pady=10)
         self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
 
@@ -135,10 +165,11 @@ class MyWindow:
     def setUrl(self, text):
         self.url.config(text=text)
 
+
 # endregion
 
 # region Logic Methods
-def parseDatime(dateString):
+def parseDatetime(dateString):
     try:
         parsedDate = datetime.strptime(dateString, "%Y-%m-%d")
     except ValueError:
@@ -153,10 +184,11 @@ def convertDateToString(timeStamp):
 
 
 def pickRandomRecipe():
-    return random.choice(recipeList)
+    return random.choice(filteredRecipeList)
 
 
 def getRecipesFromSheet():
+    global filteredRecipeList
     # Call the Sheets API
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=RECIPE_SPREADSHEET_ID,
@@ -169,10 +201,17 @@ def getRecipesFromSheet():
         print('Found Data:')
         global uniqueCuisines
         global uniqueIngredients
-        # TODO consider wiping unique lists here depending on how we reuse this method with queries
+        uniqueCuisines.clear()
+        uniqueIngredients.clear()
+        fullRecipeList.clear()
+        filteredRecipeList.clear()
+
+        uniqueCuisines.append("Any")
+        uniqueIngredients.append("Any")
+        # TODO If at the end of finding all unique options there's only one, set that to be enabled? Or maybe don't overwrite at all when filtering to one ingredient??? Why have two steps to get back
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
-            parsedDate = parseDatime(dateStr)
+            parsedDate = parseDatetime(dateStr)
 
             recipe = Recipe(row[FIELD_ID],
                             row[FIELD_NAME],
@@ -181,13 +220,16 @@ def getRecipesFromSheet():
                             parsedDate,
                             row[FIELD_CORE_INGREDIENT],
                             row[FIELD_CUISINE])
-            recipeList.append(recipe)
+            fullRecipeList.append(recipe)
 
             if recipe.cuisine not in uniqueCuisines:
                 uniqueCuisines.append(recipe.cuisine)
 
             if recipe.coreIngredient not in uniqueIngredients:
                 uniqueIngredients.append(recipe.coreIngredient)
+
+        filteredRecipeList = fullRecipeList.copy()
+        # todo: go through and delete any entires with lastCooked more recent than 2 weeks
 
 
 def markRecipeAsCooked():
