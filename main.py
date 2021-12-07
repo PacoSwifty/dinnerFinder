@@ -21,10 +21,12 @@ fullRecipeList = []
 filteredRecipeList = []
 uniqueCuisines = []
 uniqueIngredients = []
-currentlySelectedCuisine = "Any"
-currentlySelectedIngredient = "Any"
+currentlySelectedCuisine = OPTION_ANY
+currentlySelectedIngredient = OPTION_ANY
 currentRecipe = Recipe("", "", "", "", None, "", "")
 service = None
+# todo: set this to true when not in debug mode
+enforceDate = False
 
 
 # endregion
@@ -33,13 +35,17 @@ service = None
 def onGenerateClicked():
     global currentRecipe
     currentRecipe = pickRandomRecipe()
-    mywin.setRecipeName(currentRecipe.name)
-    mywin.setNotes(currentRecipe.notes)
-    mywin.setUrl(currentRecipe.url)
+    if currentRecipe is not None:
+        mywin.setRecipeName(currentRecipe.name)
+        mywin.setNotes(currentRecipe.notes)
+        mywin.setUrl(currentRecipe.url)
+
+    # If it's the first time running / numResults is empty, go ahead and display the count'
+    if not mywin.numResults.cget("text"):
+        mywin.setNumResults(f"Picking from {len(filteredRecipeList)} out of {len(fullRecipeList)} total recipes")
 
 
 def onConfirmCookedClicked():
-    print("We cooked this")
     markRecipeAsCooked()
 
 
@@ -52,15 +58,16 @@ def onCuisineSelected(selectedCuisine):
     currentlySelectedCuisine = selectedCuisine
     filteredRecipeList.clear()
     for recipe in fullRecipeList:
-        if currentlySelectedIngredient == "Any":
-            if selectedCuisine == "Any" or recipe.cuisine == selectedCuisine:
+        if currentlySelectedIngredient == OPTION_ANY:
+            if selectedCuisine == OPTION_ANY or recipe.cuisine == selectedCuisine:
                 filteredRecipeList.append(recipe)
         else:
             if (
-                    selectedCuisine == "Any" or recipe.cuisine == selectedCuisine) and recipe.coreIngredient == currentlySelectedIngredient:
+                    selectedCuisine == OPTION_ANY or recipe.cuisine == selectedCuisine) and recipe.coreIngredient == currentlySelectedIngredient:
                 filteredRecipeList.append(recipe)
     print(f"Cuisine Selected: {selectedCuisine}")
     print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
+    mywin.setNumResults(f"Picking from {len(filteredRecipeList)} out of {len(fullRecipeList)} total recipes")
 
 
 def onIngredientSelected(selectedIngredient):
@@ -68,15 +75,16 @@ def onIngredientSelected(selectedIngredient):
     currentlySelectedIngredient = selectedIngredient
     filteredRecipeList.clear()
     for recipe in fullRecipeList:
-        if currentlySelectedCuisine == "Any":
-            if selectedIngredient == "Any" or recipe.coreIngredient == selectedIngredient:
+        if currentlySelectedCuisine == OPTION_ANY:
+            if selectedIngredient == OPTION_ANY or recipe.coreIngredient == selectedIngredient:
                 filteredRecipeList.append(recipe)
         else:
             if (
-                    selectedIngredient == "Any" or recipe.coreIngredient == selectedIngredient) and recipe.cuisine == currentlySelectedCuisine:
+                    selectedIngredient == OPTION_ANY or recipe.coreIngredient == selectedIngredient) and recipe.cuisine == currentlySelectedCuisine:
                 filteredRecipeList.append(recipe)
     print(f"Ingredient Selected: {selectedIngredient}")
     print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
+    mywin.setNumResults(f"Picking from {len(filteredRecipeList)} out of {len(fullRecipeList)} total recipes")
 
 
 # endregion
@@ -106,6 +114,11 @@ class MyWindow:
                          text="",
                          font=("Ariel", 12),
                          bg=BG_COLOR, fg=NEUTRAL_DARK_COLOR)
+
+        self.numResults = Label(win,
+                                text="",
+                                font=("Ariel", 10),
+                                bg=BG_COLOR, fg=NEUTRAL_DARK_COLOR)
 
         self.generateButton = Button(win,
                                      text="Random Meal",
@@ -153,6 +166,7 @@ class MyWindow:
         self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
 
         self.confirmCookedButton.pack(side=BOTTOM, pady=10)
+        self.numResults.pack(side=BOTTOM, pady=10)
         dropDownHolder.pack(side=BOTTOM, fill=NONE, expand=FALSE)
         self.generateButton.pack(side=BOTTOM, pady=2)
 
@@ -164,6 +178,12 @@ class MyWindow:
 
     def setUrl(self, text):
         self.url.config(text=text)
+
+    def setNumResults(self, text):
+        self.numResults.config(text=text)
+
+    def disableCookedCheckbox(self):
+        self.confirmCookedButton.config(state=DISABLED)
 
 
 # endregion
@@ -184,7 +204,13 @@ def convertDateToString(timeStamp):
 
 
 def pickRandomRecipe():
-    return random.choice(filteredRecipeList)
+    if filteredRecipeList:
+        return random.choice(filteredRecipeList)
+    else:
+        mywin.setRecipeName("Sorry, we're out of recipes!")
+        mywin.setNotes("")
+        mywin.setUrl("")
+        print("ERROR! THERE WERE NO AVAILABLE RECIPES!")
 
 
 def getRecipesFromSheet():
@@ -206,12 +232,17 @@ def getRecipesFromSheet():
         fullRecipeList.clear()
         filteredRecipeList.clear()
 
-        uniqueCuisines.append("Any")
-        uniqueIngredients.append("Any")
-        # TODO If at the end of finding all unique options there's only one, set that to be enabled? Or maybe don't overwrite at all when filtering to one ingredient??? Why have two steps to get back
+        uniqueCuisines.append(OPTION_ANY)
+        uniqueIngredients.append(OPTION_ANY)
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
             parsedDate = parseDatetime(dateStr)
+
+            if parsedDate != '':
+                difference = datetime.now() - parsedDate
+                # Don't add recipes that have been cooked within the last two weeks
+                if difference.days < NO_REPEAT_THRESHOLD and enforceDate:
+                    continue
 
             recipe = Recipe(row[FIELD_ID],
                             row[FIELD_NAME],
@@ -229,10 +260,10 @@ def getRecipesFromSheet():
                 uniqueIngredients.append(recipe.coreIngredient)
 
         filteredRecipeList = fullRecipeList.copy()
-        # todo: go through and delete any entires with lastCooked more recent than 2 weeks
 
 
 def markRecipeAsCooked():
+    mywin.disableCookedCheckbox()
     # This will update the entire row based on the state of the current recipe
     values = [
         [
