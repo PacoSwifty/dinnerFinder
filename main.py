@@ -95,17 +95,19 @@ class MyWindow:
         # Create the views
         self.title = Label(win,
                            text="What Should We Eat?",
-                           font=("Arial", 24),
+                           font=("Arial", 18),
+                           wraplength=TEXT_WRAP_WIDTH,
                            bg=BG_COLOR, fg=SECONDARY_COLOR)
 
         self.recipeName = Label(win,
                                 text="Click Below to Begin",
-                                font=("Arial", 14),
+                                font=("Arial", 24),
+                                wraplength=TEXT_WRAP_WIDTH,
                                 bg=BG_COLOR, fg=SECONDARY_COLOR)
 
         self.notes = Label(win,
                            text="",
-                           font=("Arial", 12),
+                           font=("Arial", 14),
                            wraplength=TEXT_WRAP_WIDTH,
                            justify="center",
                            bg=BG_COLOR, fg=SECONDARY_COLOR)
@@ -113,6 +115,7 @@ class MyWindow:
         self.url = Label(win,
                          text="",
                          font=("Ariel", 12),
+                         wraplength=TEXT_WRAP_WIDTH,
                          bg=BG_COLOR, fg=NEUTRAL_DARK_COLOR)
 
         self.numResults = Label(win,
@@ -148,7 +151,7 @@ class MyWindow:
         self.title.place(x=100, y=50)
         self.title.pack(side=TOP, pady=15)
         self.recipeName.pack(side=TOP)
-        self.notes.pack(side=TOP)
+        self.notes.pack(side=TOP, pady=20)
         self.url.pack(side=TOP)
         self.url.bind("<Button-1>", lambda e: onUrlClicked())
 
@@ -260,6 +263,8 @@ def getRecipesFromSheet():
                 uniqueIngredients.append(recipe.coreIngredient)
 
         filteredRecipeList = fullRecipeList.copy()
+        uniqueIngredients.sort()
+        uniqueCuisines.sort()
 
 
 def markRecipeAsCooked():
