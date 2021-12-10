@@ -9,5 +9,5 @@ class Recipe:
     url: str
     notes: str
     dateCooked: datetime.datetime
-    coreIngredient: str
-    cuisine: str
+    coreIngredients: [str]
+    cuisines: [str]

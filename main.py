@@ -59,11 +59,11 @@ def onCuisineSelected(selectedCuisine):
     filteredRecipeList.clear()
     for recipe in fullRecipeList:
         if currentlySelectedIngredient == OPTION_ANY:
-            if selectedCuisine == OPTION_ANY or recipe.cuisine == selectedCuisine:
+            if selectedCuisine == OPTION_ANY or selectedCuisine in recipe.cuisines:
                 filteredRecipeList.append(recipe)
         else:
             if (
-                    selectedCuisine == OPTION_ANY or recipe.cuisine == selectedCuisine) and recipe.coreIngredient == currentlySelectedIngredient:
+                    selectedCuisine == OPTION_ANY or selectedCuisine in recipe.cuisines) and currentlySelectedIngredient in recipe.coreIngredients:
                 filteredRecipeList.append(recipe)
     print(f"Cuisine Selected: {selectedCuisine}")
     print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
@@ -76,11 +76,11 @@ def onIngredientSelected(selectedIngredient):
     filteredRecipeList.clear()
     for recipe in fullRecipeList:
         if currentlySelectedCuisine == OPTION_ANY:
-            if selectedIngredient == OPTION_ANY or recipe.coreIngredient == selectedIngredient:
+            if selectedIngredient == OPTION_ANY or selectedIngredient in recipe.coreIngredients:
                 filteredRecipeList.append(recipe)
         else:
             if (
-                    selectedIngredient == OPTION_ANY or recipe.coreIngredient == selectedIngredient) and recipe.cuisine == currentlySelectedCuisine:
+                    selectedIngredient == OPTION_ANY or selectedIngredient in recipe.coreIngredients) and currentlySelectedCuisine in recipe.cuisines:
                 filteredRecipeList.append(recipe)
     print(f"Ingredient Selected: {selectedIngredient}")
     print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
@@ -206,14 +206,21 @@ def convertDateToString(timeStamp):
     return stringifiedDate
 
 
+def buildListFromCommaString(inputString):
+    splitList = inputString.split(",")
+    returnList = []
+    for string in splitList:
+        returnList.append(string.strip())
+    return returnList
+
+
 def pickRandomRecipe():
     if filteredRecipeList:
         return random.choice(filteredRecipeList)
     else:
-        mywin.setRecipeName("Sorry, we're out of recipes!")
+        mywin.setRecipeName("Sorry, I didn't find any recipes!")
         mywin.setNotes("")
         mywin.setUrl("")
-        print("ERROR! THERE WERE NO AVAILABLE RECIPES!")
 
 
 def getRecipesFromSheet():
@@ -235,11 +242,11 @@ def getRecipesFromSheet():
         fullRecipeList.clear()
         filteredRecipeList.clear()
 
-        uniqueCuisines.append(OPTION_ANY)
-        uniqueIngredients.append(OPTION_ANY)
         for row in values:
             dateStr = row[FIELD_DATE_COOKED]
             parsedDate = parseDatetime(dateStr)
+            cuisineList = buildListFromCommaString(row[FIELD_CUISINE])
+            ingredientList = buildListFromCommaString(row[FIELD_CORE_INGREDIENT])
 
             if parsedDate != '':
                 difference = datetime.now() - parsedDate
@@ -252,19 +259,23 @@ def getRecipesFromSheet():
                             row[FIELD_URL],
                             row[FIELD_NOTES],
                             parsedDate,
-                            row[FIELD_CORE_INGREDIENT],
-                            row[FIELD_CUISINE])
+                            ingredientList,
+                            cuisineList)
             fullRecipeList.append(recipe)
 
-            if recipe.cuisine not in uniqueCuisines:
-                uniqueCuisines.append(recipe.cuisine)
+            for cuisine in recipe.cuisines:
+                if cuisine not in uniqueCuisines:
+                    uniqueCuisines.append(cuisine)
 
-            if recipe.coreIngredient not in uniqueIngredients:
-                uniqueIngredients.append(recipe.coreIngredient)
+            for ingredient in recipe.coreIngredients:
+                if ingredient not in uniqueIngredients:
+                    uniqueIngredients.append(ingredient)
 
         filteredRecipeList = fullRecipeList.copy()
         uniqueIngredients.sort()
         uniqueCuisines.sort()
+        uniqueCuisines.insert(0, OPTION_ANY)
+        uniqueIngredients.insert(0, OPTION_ANY)
 
 
 def markRecipeAsCooked():
@@ -273,7 +284,7 @@ def markRecipeAsCooked():
     values = [
         [
             currentRecipe.id, currentRecipe.name, currentRecipe.url, currentRecipe.notes,
-            convertDateToString(datetime.now()), currentRecipe.coreIngredient, currentRecipe.cuisine
+            convertDateToString(datetime.now()), currentRecipe.coreIngredients, currentRecipe.cuisines
         ]
     ]
     body = {
