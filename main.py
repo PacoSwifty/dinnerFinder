@@ -38,7 +38,7 @@ def onGenerateClicked():
     if currentRecipe is not None:
         mywin.setRecipeName(currentRecipe.name)
         mywin.setNotes(currentRecipe.notes)
-        mywin.setUrl(currentRecipe.url)
+        # mywin.setUrl(currentRecipe.url)
 
     # If it's the first time running / numResults is empty, go ahead and display the count'
     if not mywin.numResults.cget("text"):
@@ -112,12 +112,6 @@ class MyWindow:
                            justify="center",
                            bg=BG_COLOR, fg=SECONDARY_COLOR)
 
-        self.url = Label(win,
-                         text="",
-                         font=("Ariel", 12),
-                         wraplength=TEXT_WRAP_WIDTH,
-                         bg=BG_COLOR, fg=NEUTRAL_DARK_COLOR)
-
         self.numResults = Label(win,
                                 text="",
                                 font=("Ariel", 10),
@@ -132,15 +126,6 @@ class MyWindow:
                                      activebackground=NEUTRAL_DARK_COLOR, activeforeground=PRIMARY_COLOR,
                                      command=onGenerateClicked)
 
-        self.confirmCookedButton = Checkbutton(win,
-                                               text="We Cooked It!",
-                                               padx=4, pady=2,
-                                               font=("Arial", 10),
-                                               bd=10,
-                                               fg=SECONDARY_COLOR, bg=BG_COLOR,
-                                               activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
-                                               command=onConfirmCookedClicked)
-
         # Setting up OptionMenu dropdowns
         self.selectedCuisineVariable = StringVar(win)
         self.selectedCuisineVariable.set(uniqueCuisines[0])
@@ -149,11 +134,9 @@ class MyWindow:
 
         # Place the views
         self.title.place(x=100, y=50)
-        self.title.pack(side=TOP, pady=15)
+        self.title.pack(side=TOP, pady=35)
         self.recipeName.pack(side=TOP)
         self.notes.pack(side=TOP, pady=20)
-        self.url.pack(side=TOP)
-        self.url.bind("<Button-1>", lambda e: onUrlClicked())
 
         # Cuisine and ingredient pickers
         dropDownHolder = Frame(win, bg=BG_COLOR)
@@ -168,7 +151,29 @@ class MyWindow:
         self.cuisineOptions.pack(in_=dropDownHolder, side=LEFT, padx=20, pady=10)
         self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
 
-        self.confirmCookedButton.pack(side=BOTTOM, pady=10)
+        # URL and Confirmation Views
+        urlConfirmationFrame = Frame(win, bg=BG_COLOR)
+        self.url = Label(urlConfirmationFrame,
+                         pady=10,
+                         text="Go to Recipe",
+                         font=("Ariel", 12),
+                         wraplength=TEXT_WRAP_WIDTH,
+                         bg=BG_COLOR, fg=SECONDARY_COLOR)
+        self.url.bind("<Button-1>", lambda e: onUrlClicked())
+
+        self.confirmCookedButton = Checkbutton(urlConfirmationFrame,
+                                               text="We Cooked It!",
+                                               pady=2,
+                                               font=("Arial", 12),
+                                               bd=10,
+                                               fg=SECONDARY_COLOR, bg=BG_COLOR,
+                                               activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
+                                               command=onConfirmCookedClicked)
+
+        self.confirmCookedButton.pack(in_=urlConfirmationFrame, side=BOTTOM, pady=10)
+        self.url.pack(in_=urlConfirmationFrame, side=TOP)
+        urlConfirmationFrame.pack(side=BOTTOM, fill=NONE, expand=FALSE)
+
         self.numResults.pack(side=BOTTOM, pady=10)
         dropDownHolder.pack(side=BOTTOM, fill=NONE, expand=FALSE)
         self.generateButton.pack(side=BOTTOM, pady=2)
