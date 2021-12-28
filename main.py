@@ -25,8 +25,7 @@ currentlySelectedCuisine = OPTION_ANY
 currentlySelectedIngredient = OPTION_ANY
 currentRecipe = Recipe("", "", "", "", None, "", "")
 service = None
-# todo: set this to true when not in debug mode
-enforceDate = False
+enforceDate = True
 
 
 # endregion
@@ -35,10 +34,10 @@ enforceDate = False
 def onGenerateClicked():
     global currentRecipe
     currentRecipe = pickRandomRecipe()
+    mywin.enableCookedCheckbox()
     if currentRecipe is not None:
         mywin.setRecipeName(currentRecipe.name)
         mywin.setNotes(currentRecipe.notes)
-        # mywin.setUrl(currentRecipe.url)
 
     # If it's the first time running / numResults is empty, go ahead and display the count'
     if not mywin.numResults.cget("text"):
@@ -50,7 +49,8 @@ def onConfirmCookedClicked():
 
 
 def onUrlClicked():
-    webbrowser.open_new(currentRecipe.url)
+    if currentRecipe.url:
+        webbrowser.open_new(currentRecipe.url)
 
 
 def onCuisineSelected(selectedCuisine):
@@ -65,8 +65,6 @@ def onCuisineSelected(selectedCuisine):
             if (
                     selectedCuisine == OPTION_ANY or selectedCuisine in recipe.cuisines) and currentlySelectedIngredient in recipe.coreIngredients:
                 filteredRecipeList.append(recipe)
-    print(f"Cuisine Selected: {selectedCuisine}")
-    print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
     mywin.setNumResults(f"Picking from {len(filteredRecipeList)} out of {len(fullRecipeList)} total recipes")
 
 
@@ -82,8 +80,6 @@ def onIngredientSelected(selectedIngredient):
             if (
                     selectedIngredient == OPTION_ANY or selectedIngredient in recipe.coreIngredients) and currentlySelectedCuisine in recipe.cuisines:
                 filteredRecipeList.append(recipe)
-    print(f"Ingredient Selected: {selectedIngredient}")
-    print(f"Found {len(filteredRecipeList)} recipes matching that criteria.")
     mywin.setNumResults(f"Picking from {len(filteredRecipeList)} out of {len(fullRecipeList)} total recipes")
 
 
@@ -151,9 +147,7 @@ class MyWindow:
         self.cuisineOptions.pack(in_=dropDownHolder, side=LEFT, padx=20, pady=10)
         self.ingredientOptions.pack(in_=dropDownHolder, side=RIGHT, padx=20, pady=10)
 
-        # URL and Confirmation Views
-        urlConfirmationFrame = Frame(win, bg=BG_COLOR)
-        self.url = Label(urlConfirmationFrame,
+        self.url = Label(win,
                          pady=10,
                          text="Go to Recipe",
                          font=("Ariel", 12),
@@ -161,7 +155,7 @@ class MyWindow:
                          bg=BG_COLOR, fg=SECONDARY_COLOR)
         self.url.bind("<Button-1>", lambda e: onUrlClicked())
 
-        self.confirmCookedButton = Checkbutton(urlConfirmationFrame,
+        self.confirmCookedButton = Checkbutton(win,
                                                text="We Cooked It!",
                                                pady=2,
                                                font=("Arial", 12),
@@ -170,13 +164,11 @@ class MyWindow:
                                                activebackground=BG_COLOR, activeforeground=SECONDARY_COLOR,
                                                command=onConfirmCookedClicked)
 
-        self.confirmCookedButton.pack(in_=urlConfirmationFrame, side=BOTTOM, pady=10)
-        self.url.pack(in_=urlConfirmationFrame, side=TOP)
-        urlConfirmationFrame.pack(side=BOTTOM, fill=NONE, expand=FALSE)
-
+        self.confirmCookedButton.pack(side=BOTTOM, pady=10)
         self.numResults.pack(side=BOTTOM, pady=10)
         dropDownHolder.pack(side=BOTTOM, fill=NONE, expand=FALSE)
         self.generateButton.pack(side=BOTTOM, pady=2)
+        self.url.pack(side=BOTTOM)
 
     def setRecipeName(self, text):
         self.recipeName.config(text=text)
@@ -193,6 +185,10 @@ class MyWindow:
     def disableCookedCheckbox(self):
         self.confirmCookedButton.config(state=DISABLED)
 
+    def enableCookedCheckbox(self):
+        self.confirmCookedButton.config(state=NORMAL)
+        self.confirmCookedButton.deselect()
+
 
 # endregion
 
@@ -207,7 +203,6 @@ def parseDatetime(dateString):
 
 def convertDateToString(timeStamp):
     stringifiedDate = timeStamp.strftime("%Y-%m-%d")
-    print(f"Converted datetime to this string: {stringifiedDate}")
     return stringifiedDate
 
 
@@ -286,10 +281,12 @@ def getRecipesFromSheet():
 def markRecipeAsCooked():
     mywin.disableCookedCheckbox()
     # This will update the entire row based on the state of the current recipe
+    ingredientString = ",".join(currentRecipe.coreIngredients)
+    cuisineString = ",".join(currentRecipe.cuisines)
     values = [
         [
             currentRecipe.id, currentRecipe.name, currentRecipe.url, currentRecipe.notes,
-            convertDateToString(datetime.now()), currentRecipe.coreIngredients, currentRecipe.cuisines
+            convertDateToString(datetime.now()), ingredientString, cuisineString
         ]
     ]
     body = {
